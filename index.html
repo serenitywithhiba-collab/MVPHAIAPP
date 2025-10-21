@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Laboratoire Hibalogique Inc. — HAI v8.5</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<!-- SheetJS for Excel export -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#fff7f7;--primary:#b91c1c;--muted:#6b7280;--card:#ffffff}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#fff,#fff);color:#0a0f1a}
+.header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:#fff;border-bottom:3px solid #b91c1c}
+.brand{display:flex;gap:12px;align-items:center}
+.brand h1{margin:0;font-size:18px;color:#0a0f1a}
+.brand p{margin:0;color:var(--muted);font-size:12px}
+.container{display:grid;grid-template-columns:1fr 360px;gap:20px;max-width:1200px;margin:20px auto;padding:20px}
+.card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 6px 20px rgba(15,23,42,.06);margin-bottom:16px}
+.btn{background:var(--primary);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+.btn.ghost{background:transparent;color:var(--primary);border:1px solid rgba(185,28,28,.25)}
+.small{font-size:13px;color:var(--muted)}
+.input, select, textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #e5e7eb}
+.preview{width:100%;height:260px;border-radius:10px;background:#f7fafc;display:flex;align-items:center;justify-content:center;color:#94a3b8;overflow:hidden}
+.preview img{width:100%;height:100%;object-fit:cover}
+.timeline{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.tp{padding:8px 10px;border-radius:8px;background:#fff7f7;border:1px dashed rgba(185,28,28,.25);cursor:pointer}
+.tp.active{background:linear-gradient(90deg,#b91c1c,#ef4444);color:#fff;border:none}
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
+.metricCard{background:#fff7f7;padding:10px;border-radius:10px;color:#0a0f1a;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.aside{position:sticky;top:20px}
+.table{width:100%;border-collapse:collapse;margin-top:10px}
+.table th,.table td{padding:8px;border-bottom:1px solid #f3f4f6;text-align:left;font-size:13px}
+.legendPill{display:inline-flex;gap:8px;align-items:center;font-size:12px;padding:6px 8px;background:#fff;border:1px solid #e5e7eb;border-radius:999px}
+.legendDot{width:10px;height:10px;border-radius:999px;display:inline-block}
+.overlayWrap{position:relative}
+.mask{position:absolute;inset:0;background:rgba(0,0,0,0.45);pointer-events:none}
+.circle{position:absolute;border:2px solid #fff;border-radius:9999px;width:70%;height:70%;left:15%;top:15%;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);}
+.midline{position:absolute;top:15%;bottom:15%;left:calc(50% - 1px);width:2px;background:#ffffffAA}
+.footer{max-width:1200px;margin:0 auto;padding:16px 20px;color:#475569;font-size:12px;display:flex;justify-content:space-between;align-items:center}
+.star{font-size:20px;cursor:pointer;color:#e5e7eb}
+.star.active{color:#f59e0b}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="brand">
+    <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#b91c1c,#ef4444);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700">H</div>
+    <div>
+      <h1>Laboratoire Hibalogique Inc. — H™ | GCP‑Aligned</h1>
+      <p class="small">HAI — Clinical Visual Analysis & Enrollment (EN/FR)</p>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <a class="small" href="https://labhibalogique.org" target="_blank" rel="noopener">labhibalogique.org</a>
+    <button class="btn ghost" onclick="toggleLang()" id="langBtn">FR</button>
+  </div>
+</header>
+
+<div class="container">
+  <main>
+    <section class="card">
+      <h2 id="c_title">Participant Consent</h2>
+      <p class="small" id="c_intro">Please read the consent below, complete the fields, and sign electronically to continue.</p>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px">
+        <div><label>Study Title</label><input id="study_title" class="input" placeholder=""/></div>
+        <div><label>Client Name</label><input id="client_name" class="input" placeholder=""/></div>
+        <div><label>Product Type</label><input id="product_type" class="input" placeholder=""/></div>
+        <div><label>Product Name</label><input id="product_name" class="input" placeholder=""/></div>
+        <div><label>Batch Number</label><input id="batch_no" class="input" placeholder=""/></div>
+        <div><label>Test Area</label><input id="test_area" class="input" placeholder=""/></div>
+        <div style="grid-column:1/-1"><label>Timepoints (comma-separated)</label><input id="timepoints" class="input" placeholder="e.g., Baseline, Week 2, Week 4, Week 8"/></div>
+      </div>
+      <div class="small" style="margin-top:10px" id="consentText"></div>
+      <hr/>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+        <div><label>Full name</label><input id="p_name" class="input"/></div>
+        <div><label>Age</label><input id="p_age" class="input" type="number" min="16" max="100"/></div>
+        <div><label>Gender / Sex</label><input id="p_gender" class="input"/></div>
+        <div><label>Fitzpatrick phototype (I–VI)</label><input id="p_photo" class="input"/></div>
+        <div><label>Skin type</label><input id="p_skin" class="input"/></div>
+        <div><label>Pregnant or lactating</label><select id="p_preg" class="input"><option>No</option><option>Yes</option><option>N/A</option></select></div>
+        <div><label>Allergies</label><input id="p_allergy" class="input"/></div>
+        <div><label>Current meds / topicals</label><input id="p_meds" class="input"/></div>
+      </div>
+      <h3 style="margin-top:14px">Electronic Signature</h3>
+      <div class="small">Type your name and draw your signature.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+        <div><label>Typed name</label><input id="sig_name" class="input"/></div>
+        <div><label>Date</label><input id="sig_date" class="input" type="date"/></div>
+      </div>
+      <canvas id="sigCanvas" class="preview" height="120"></canvas>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+        <button class="btn ghost" onclick="clearSig()">Clear</button>
+        <label><input id="attest" type="checkbox"/> <span id="c_attest">I have read and understood the consent and I agree to participate.</span></label>
+      </div>
+      <div class="small" style="margin-top:8px">Your consent record (name, date, signature image, answers) will be saved locally for this demo. Contact: info@labhibalogique.com.</div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="acceptConsent()" id="btn_accept">Accept & Continue</button>
+        <button class="btn ghost" onclick="downloadConsent()">Download JSON copy</button>
+        <button class="btn ghost" onclick="generateConsentPDF('en')">Download PDF (EN)</button>
+        <button class="btn ghost" onclick="generateConsentPDF('fr')">Télécharger PDF (FR)</button>
+      </div>
+      <div id="consentMsg" class="small" style="margin-top:8px"></div>
+    </section>
+
+    <section class="card" id="captureCard" style="display:none">
+      <h2>Capture & Upload</h2>
+      <div class="legendPill" style="margin:6px 0 10px 0;">
+        <span class="legendDot" style="background:#22C55E"></span>&nbsp;Good
+        &nbsp;&nbsp;<span class="legendDot" style="background:#EAB308"></span>&nbsp;Mild
+        &nbsp;&nbsp;<span class="legendDot" style="background:#F97316"></span>&nbsp;Moderate
+        &nbsp;&nbsp;<span class="legendDot" style="background:#EF4444"></span>&nbsp;Severe
+      </div>
+      <div style="display:flex;gap:12px;margin-top:6px">
+        <div style="flex:1">
+          <div class="preview overlayWrap" id="previewWrap">
+            <div id="previewBox">No image selected</div>
+            <div class="circle"></div>
+            <div class="midline"></div>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+            <button class="btn" onclick="startCamera()">Start Camera</button>
+            <button class="btn" onclick="capturePhoto()">Capture</button>
+            <button class="btn" onclick="savePhoto()" id="savePhotoBtn" style="background:#0b6ed9;display:none">Save Photo</button>
+            <button class="btn ghost" onclick="stopCamera()">Stop</button>
+          </div>
+          <div style="margin-top:10px"><input type="file" accept="image/*" id="fileInput" onchange="handleFile(event)"></div>
+          <div class="timeline" id="timepointList" style="margin-top:14px"></div>
+        </div>
+        <div style="width:300px">
+          <div class="card">
+            <div style="font-weight:700">Selected Timepoint</div>
+            <div id="tpName" class="small">—</div>
+            <div class="small" style="margin-top:8px">Notes</div>
+            <textarea id="tpNotes" rows="4" class="input" placeholder="Add notes for this timepoint..."></textarea>
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <button class="btn" onclick="saveTimepoint()">Save Timepoint</button>
+              <button class="btn ghost" onclick="deleteTimepoint()" style="background:#ef4444;color:#fff">Delete</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:12px">
+            <div style="font-weight:700">Satisfaction (final)</div>
+            <div class="small">Rate the product overall after the final timepoint:</div>
+            <div id="stars" style="margin-top:6px">
+              <span class="star" data-v="1">★</span>
+              <span class="star" data-v="2">★</span>
+              <span class="star" data-v="3">★</span>
+              <span class="star" data-v="4">★</span>
+              <span class="star" data-v="5">★</span>
+            </div>
+            <div class="small" id="starNote" style="margin-top:6px">Not saved yet</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="analysisCard" style="display:none">
+      <h2>Analysis Timeline</h2>
+      <div class="legendPill" style="margin:6px 0 10px 0;">
+        <span class="legendDot" style="background:#22C55E"></span>&nbsp;Good
+        &nbsp;&nbsp;<span class="legendDot" style="background:#EAB308"></span>&nbsp;Mild
+        &nbsp;&nbsp;<span class="legendDot" style="background:#F97316"></span>&nbsp;Moderate
+        &nbsp;&nbsp;<span class="legendDot" style="background:#EF4444"></span>&nbsp;Severe
+      </div>
+      <div id="timelineMetrics" style="margin-top:12px"></div>
+      <div class="metrics" id="metricsGrid"></div>
+      <div style="margin-top:12px">
+        <canvas id="chartWrinkles" height="130"></canvas>
+        <canvas id="chartRedness" height="130" style="margin-top:12px"></canvas>
+        <canvas id="chartDryness" height="130" style="margin-top:12px"></canvas>
+        <canvas id="chartHydration" height="130" style="margin-top:12px"></canvas>
+      </div>
+    </section>
+
+    <section class="card" id="enrollCard" style="display:none">
+      <h2>Enroll Participant</h2>
+      <div class="small">Attach saved timepoints and the final satisfaction rating to this participant.</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px">
+        <div><input id="firstName" class="input" placeholder="First name"/></div>
+        <div><input id="lastName" class="input" placeholder="Last name"/></div>
+        <div><input id="email" class="input" placeholder="Email"/></div>
+        <div><select id="studySelect" class="input"><option value="">Select a study (auto-created from fields)</option></select></div>
+      </div>
+      <div style="margin-top:8px"><label><input type="checkbox" id="consentBox" checked disabled/> Consent captured electronically for this participant.</label></div>
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn" onclick="submitEnrollment()">Submit Enrollment</button>
+      </div>
+      <div id="enrollMsg" class="small" style="margin-top:8px"></div>
+    </section>
+
+    <section class="card" id="adminCard" style="display:none">
+      <h2>Admin — Participants</h2>
+      <div class="small">Participants and their timepoints. Select and export to Excel.</div>
+      <table class="table">
+        <thead><tr><th><input type="checkbox" id="selAll" onclick="toggleSelectAll(this)"/></th><th>Name</th><th>Email</th><th>Study</th><th>Timepoints</th><th>Satisfaction</th><th>Actions</th></tr></thead>
+        <tbody id="participantsTable"></tbody>
+      </table>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="exportSelectedExcel()">Export Selected (Excel)</button>
+        <button class="btn ghost" onclick="clearAll()">Clear All Data</button>
+      </div>
+    </section>
+  </main>
+
+  <aside class="aside">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="font-weight:700;color:#b91c1c">HAI Assistant</div>
+        <div class="small">Type a question</div>
+      </div>
+      <div id="chatLog"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input id="chatInput" class="input" placeholder="How to capture a good photo?" onkeyup="if(event.key==='Enter') sendChat()"/>
+        <button class="btn" onclick="sendChat()">Send</button>
+      </div>
+      <div class="small" style="margin-top:6px">Local demo assistant</div>
+    </div>
+  </aside>
+</div>
+
+<footer class="footer">
+  <span>© Laboratoire Hibalogique Inc. — Montréal, QC, Canada • <a href="mailto:info@labhibalogique.com">info@labhibalogique.com</a></span>
+  <a href="#" onclick="openPrivacy();return false;">Privacy & Data Handling</a>
+</footer>
+
+<!-- Privacy Modal -->
+<div id="privacyModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35)">
+  <div style="width:min(720px,92vw);max-height:80vh;overflow:auto;background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 style="margin:0">Privacy & Data Handling</h3>
+      <button class="btn ghost" onclick="closePrivacy()">Close</button>
+    </div>
+    <div class="small" id="privacyText" style="margin-top:10px"></div>
+    <div style="margin-top:10px"><button class="btn ghost" onclick="downloadPrivacyPDF()">Download PDF Policy</button></div>
+  </div>
+</div>
+
+<script>
+// i18n minimal
+let LANG='en';
+function toggleLang(){ LANG = LANG==='en'?'fr':'en'; document.getElementById('langBtn').innerText = LANG==='en'?'FR':'EN'; renderConsent(); renderPrivacy(); }
+
+function consentHTML(lang){
+  if(lang==='fr') return '<b>Consentement éclairé — Canada</b><br><b>But :</b> Évaluer l’innocuité, la tolérance et/ou l’efficacité d’un produit cosmétique/OTC/PSN.<br><b>Procédures :</b> Évaluations photographiques et instrumentales de la zone test (p. ex. visage, mains, corps) aux jalons définis (selon votre saisie), questionnaires et application normalisée du produit.<br><b>Risques :</b> Irritation légère possible (rougeur, sécheresse, démangeaison, brûlure, comédons, changements transitoires de couleur).<br><b>Confidentialité :</b> Conforme à la LPRPDE (PIPEDA), EPTC 2, ICH E6(R2) et, le cas échéant, HIPAA pour les partenaires américains. Données codées et désidentifiées dans les publications.<br><b>Consentement photographique :</b> Vous autorisez la capture, l’enregistrement et l’usage scientifique/pédagogique des images. Les usages publicitaires exigent un consentement distinct écrit.<br><b>Participation volontaire :</b> Vous pouvez vous retirer en tout temps sans conséquence.<br><b>Contact :</b> info@labhibalogique.com.';
+  return '<b>Informed Consent — Canada</b><br><b>Purpose:</b> To evaluate safety, tolerance, and/or efficacy of a cosmetic/OTC/NHP product.<br><b>Procedures:</b> Photographic/instrumental assessments of the test area (e.g., face, hands, body) at your defined timepoints, questionnaires, and standardized product application.<br><b>Risks:</b> Possible mild irritation (redness, dryness, itch, burning, comedones, transient color changes).<br><b>Privacy:</b> Conducted under PIPEDA, TCPS2, ICH E6(R2), and—if applicable—HIPAA. Data are coded and de-identified for publications.<br><b>Photographic Consent:</b> You authorize capture, storage, and scientific/educational use of images. Advertising use requires separate written permission.<br><b>Voluntary Participation:</b> You may withdraw at any time without penalty.<br><b>Contact:</b> info@labhibalogique.com.';
+}
+function renderConsent(){
+  const tps = (document.getElementById('timepoints').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  document.getElementById('consentText').innerHTML = consentHTML(LANG) + (tps.length?('<br><b>'+(LANG==='fr'?'Jalons: ':'Timepoints: ')+'</b>'+tps.join(', ')) : '');
+}
+renderConsent();
+
+// signature pad
+const sigCanvas=document.getElementById('sigCanvas'), sctx=sigCanvas.getContext('2d');
+let drawing=false;
+sigCanvas.addEventListener('mousedown', e=>{drawing=true; sctx.moveTo(e.offsetX,e.offsetY);});
+sigCanvas.addEventListener('mousemove', e=>{if(drawing){ sctx.lineTo(e.offsetX,e.offsetY); sctx.strokeStyle='#111'; sctx.lineWidth=2; sctx.stroke(); }});
+window.addEventListener('mouseup', ()=> drawing=false);
+function clearSig(){ sctx.clearRect(0,0,sigCanvas.width,sigCanvas.height); }
+
+// severity helpers (4-level)
+function severityBand(v){
+  if (v <= 25) return 'good';
+  if (v <= 50) return 'mild';
+  if (v <= 75) return 'moderate';
+  return 'severe';
+}
+function colorFor(value){
+  const band = severityBand(value);
+  return ({good:'rgba(34,197,94,0.95)',mild:'rgba(234,179,8,0.95)',moderate:'rgba(249,115,22,0.95)',severe:'rgba(239,68,68,0.95)'})[band];
+}
+function bandBg(band){
+  return ({good:'rgba(34,197,94,0.08)',mild:'rgba(234,179,8,0.08)',moderate:'rgba(249,115,22,0.08)',severe:'rgba(239,68,68,0.08)'})[band];
+}
+
+// local storage keys
+const consentKey='hai_v85_consent', storageKey='hai_v85_participants', lastAnalysisKey='hai_v85_last_analysis', studyKey='hai_v85_studies';
+
+function acceptConsent(){
+  const r=id=>document.getElementById(id).value.trim();
+  const attest=document.getElementById('attest').checked;
+  if(!r('p_name')||!r('p_age')||!r('sig_name')||!attest){
+    document.getElementById('consentMsg').textContent=LANG==='en'?'Please complete all required fields and attest consent.':'Veuillez remplir tous les champs requis et attester votre consentement.'; return;
+  }
+  // build study object (auto-add to selector)
+  const timepoints = (document.getElementById('timepoints').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const study = {
+    title: r('study_title'),
+    client: r('client_name'),
+    product_type: r('product_type'),
+    product_name: r('product_name'),
+    batch: r('batch_no'),
+    area: r('test_area'),
+    timepoints
+  };
+  localStorage.setItem(studyKey, JSON.stringify(study));
+
+  const sig = sigCanvas.toDataURL('image/png');
+  const record={ts:new Date().toISOString(),lang:LANG,name:r('p_name'),age:r('p_age'),gender:r('p_gender'),phototype:r('p_photo'),skin:r('p_skin'),preg:document.getElementById('p_preg').value,allergy:r('p_allergy'),meds:r('p_meds'),typed_name:r('sig_name'),date:document.getElementById('sig_date').value,signature_png:sig,study};
+  localStorage.setItem(consentKey, JSON.stringify(record));
+
+  // init UI
+  document.getElementById('captureCard').style.display='block';
+  document.getElementById('analysisCard').style.display='block';
+  document.getElementById('enrollCard').style.display='block';
+  document.getElementById('adminCard').style.display='block';
+  buildTimepoints(timepoints);
+  populateStudySelect(study);
+}
+function populateStudySelect(study){
+  const sel = document.getElementById('studySelect');
+  sel.innerHTML = '<option>'+ (study.title || 'Untitled Study') +'</option>';
+}
+
+// Camera
+let cameraStream=null; let lastCapturedDataUrl=null; let currentTP=null;
+async function startCamera(){ try{ cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}}); const v=document.createElement('video'); v.autoplay=true; v.playsInline=true; v.muted=true; v.srcObject=cameraStream; const p=document.getElementById('previewBox'); p.innerHTML=''; p.appendChild(v); p._video=v; }catch(e){ alert('Camera not available: '+e.message); } }
+function stopCamera(){ if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; } const p=document.getElementById('previewBox'); p.innerHTML='No image selected'; p._video=null; }
+function capturePhoto(){ const p=document.getElementById('previewBox'); const v=p._video; if(!v){ alert(LANG==='en'?'Start the camera first or upload an image.':'Démarrez la caméra ou téléversez une image.'); return; } const c=document.createElement('canvas'); c.width=v.videoWidth||720; c.height=v.videoHeight||480; const cx=c.getContext('2d'); cx.drawImage(v,0,0,c.width,c.height); const url=c.toDataURL('image/jpeg',0.9); lastCapturedDataUrl=url; displayCaptured(url); document.getElementById('savePhotoBtn').style.display='inline-block'; }
+function handleFile(e){ const f=e.target.files[0]; if(!f) return; const url=URL.createObjectURL(f); lastCapturedDataUrl=url; displayCaptured(url); document.getElementById('savePhotoBtn').style.display='inline-block'; }
+function displayCaptured(src){ const box=document.getElementById('previewBox'); box.innerHTML=''; const img=document.createElement('img'); img.src=src; box.appendChild(img); const metrics=analyze(src); localStorage.setItem(lastAnalysisKey, JSON.stringify({ts:new Date().toISOString(),metrics,src})); showAnalysis(metrics); }
+function savePhoto(){ if(!lastCapturedDataUrl){ alert(LANG==='en'?'No photo to save':'Pas de photo à enregistrer'); return; } const a=document.createElement('a'); a.href=lastCapturedDataUrl; a.download='hai_photo.jpg'; a.click(); }
+
+// pseudo-analysis
+function analyze(src){ const seed=(src.length||111)%97; const pct=(b,v)=>Math.max(2,Math.min(95,Math.round(b+((seed*13)%v)-v/2))); return {wrinkles:pct(30,20),redness:pct(16,16),dryness:pct(24,18),pores:pct(22,20),hydration:100-pct(24,18),brightness:pct(18,16),hyperpigmentation:pct(18,16)}; }
+function showAnalysis(m){ const grid=document.getElementById('metricsGrid'); grid.innerHTML=''; Object.entries(m).forEach(([k,v])=>{ const d=document.createElement('div'); d.className='metricCard'; d.innerHTML=`<div style="text-transform:capitalize">${k}</div><div style="font-weight:800">${v}%</div>`; grid.appendChild(d); }); showTimeline(); updateCharts(); }
+
+// timepoints
+function buildTimepoints(tpArr){ const t=document.getElementById('timepointList'); t.innerHTML=''; const arr = tpArr && tpArr.length ? tpArr : []; if(!arr.length){ const sp=document.createElement('div'); sp.className='small'; sp.textContent='Enter timepoints above (comma-separated) to enable timeline.'; t.appendChild(sp); return; } arr.forEach(tp=>{ const b=document.createElement('button'); b.className='tp'; b.textContent=tp; b.onclick=()=>selectTP(tp,b); t.appendChild(b); }); selectTP(arr[0], t.querySelector('button')); }
+function selectTP(name,btn){ document.querySelectorAll('.tp').forEach(n=>n.classList.remove('active')); if(btn) btn.classList.add('active'); currentTP=name; document.getElementById('tpName').innerText=name; const notes=loadTPNotes()||''; document.getElementById('tpNotes').value=notes; }
+function loadTPNotes(){ const temp=JSON.parse(sessionStorage.getItem('hai_v85_temp')||'{}'); return temp[currentTP]?temp[currentTP].notes:''; }
+function saveTimepoint(){ const notes=document.getElementById('tpNotes').value; const last=JSON.parse(localStorage.getItem(lastAnalysisKey)||'null'); if(!last){ alert(LANG==='en'?'No analysis available to save':'Aucune analyse disponible'); return; } const temp=JSON.parse(sessionStorage.getItem('hai_v85_temp')||'{}'); temp[currentTP]={ts:new Date().toISOString(),metrics:last.metrics,src:last.src,notes}; sessionStorage.setItem('hai_v85_temp', JSON.stringify(temp)); alert(LANG==='en'?'Timepoint saved':'Point temporel enregistré'); showTimeline(); }
+function deleteTimepoint(){ if(!confirm(LANG==='en'?('Delete saved timepoint data for '+currentTP+'?'):('Supprimer le point temporel '+currentTP+' ?'))) return; const temp=JSON.parse(sessionStorage.getItem('hai_v85_temp')||'{}'); delete temp[currentTP]; sessionStorage.setItem('hai_v85_temp', JSON.stringify(temp)); document.getElementById('tpNotes').value=''; showTimeline(); }
+
+// satisfaction stars (single, final)
+let satisfaction=0;
+document.querySelectorAll('#stars .star').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    satisfaction = parseInt(el.getAttribute('data-v'));
+    document.querySelectorAll('#stars .star').forEach(s=>s.classList.toggle('active', parseInt(s.getAttribute('data-v')) <= satisfaction));
+    document.getElementById('starNote').textContent = 'Saved: ' + '★★★★★'.slice(0,satisfaction) + '☆☆☆☆☆'.slice(satisfaction);
+  });
+});
+
+function showTimeline(){ const temp=JSON.parse(sessionStorage.getItem('hai_v85_temp')||'{}'); const c=document.getElementById('timelineMetrics'); c.innerHTML=''; Object.keys(temp).forEach(tp=>{ const m=temp[tp].metrics; const d=document.createElement('div'); d.style.marginTop='8px'; d.innerHTML=`<div style='font-weight:700'>${tp} <span class='small' style='margin-left:8px'>${new Date(temp[tp].ts).toLocaleString()}</span></div><div style='display:flex;gap:8px;margin-top:6px'><div class='metricCard'>Wrinkles <span style='font-weight:800'>${m.wrinkles}%</span></div><div class='metricCard'>Redness <span style='font-weight:800'>${m.redness}%</span></div><div class='metricCard'>Dryness <span style='font-weight:800'>${m.dryness}%</span></div></div>`; c.appendChild(d); }); updateCharts(); }
+
+// charts
+let ch1=null,ch2=null,ch3=null,ch4=null;
+function renderChart(id, labels, data, label){
+  const ctx=document.getElementById(id).getContext('2d');
+  const severityBands={id:'severityBands',beforeDatasetsDraw(chart){const {ctx, chartArea, scales:{y}}=chart;if(!chartArea)return;const ranges=[{max:25,band:'good'},{max:50,band:'mild'},{max:75,band:'moderate'},{max:100,band:'severe'}];let prev=0;ranges.forEach(r=>{const yTop=y.getPixelForValue(r.max);const yBottom=y.getPixelForValue(prev);ctx.save();ctx.fillStyle=bandBg(r.band);ctx.fillRect(chartArea.left,yTop,chartArea.right-chartArea.left,yBottom-yTop);ctx.restore();prev=r.max;});}};
+  if(window[id]) window[id].destroy();
+  window[id]=new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets:[{label,data,tension:.3,spanGaps:true,pointRadius:3,pointBackgroundColor:data.map(v=>colorFor(v??0)),
+      segment:{borderColor:ctx=>{const i=ctx.p0DataIndex??ctx.dataIndex??0;const val=ctx.chart.data.datasets[0].data[i];return colorFor(val??0);}}}]},
+    options:{responsive:true,plugins:{legend:{display:true},tooltip:{callbacks:{label:(tt)=>{const v=tt.raw??0;const band=severityBand(v);return `${tt.dataset.label}: ${v}% (${band})`;}}}},scales:{y:{beginAtZero:true,suggestedMax:100}}},
+    plugins:[severityBands]
+  });
+}
+function updateCharts(){
+  const participants=JSON.parse(localStorage.getItem(storageKey)||'[]');
+  const study=JSON.parse(localStorage.getItem(studyKey)||'{}');
+  const labels=study.timepoints||[]; if(!labels.length) return;
+  const agg={wrinkles:[],redness:[],dryness:[],hydration:[]};
+  labels.forEach(tp=>{
+    let w=[],r=[],d=[],h=[];
+    // aggregate over enrolled participants' saved temp (simplified demo: use session temp)
+    const temp=JSON.parse(sessionStorage.getItem('hai_v85_temp')||'{}');
+    const t=temp[tp]; if(t && t.metrics){ w.push(t.metrics.wrinkles); r.push(t.metrics.redness); d.push(t.metrics.dryness); h.push(t.metrics.hydration); }
+    agg.wrinkles.push(w.length?Math.round(w.reduce((a,b)=>a+b,0)/w.length):null);
+    agg.redness.push(r.length?Math.round(r.reduce((a,b)=>a+b,0)/r.length):null);
+    agg.dryness.push(d.length?Math.round(d.reduce((a,b)=>a+b,0)/d.length):null);
+    agg.hydration.push(h.length?Math.round(h.reduce((a,b)=>a+b,0)/h.length):null);
+  });
+  renderChart('chartWrinkles', labels, agg.wrinkles, 'Wrinkles');
+  renderChart('chartRedness', labels, agg.redness, 'Redness');
+  renderChart('chartDryness', labels, agg.dryness, 'Dryness');
+  renderChart('chartHydration', labels, agg.hydration, 'Hydration');
+}
+
+// enrollment/admin
+function submitEnrollment(){
+  const first=document.getElementById('firstName').value.trim();
+  const last=document.getElementById('lastName').value.trim();
+  const email=document.getElementById('email').value.trim();
+  const consent=JSON.parse(localStorage.getItem(consentKey)||'null');
+  const study=JSON.parse(localStorage.getItem(studyKey)||'{}');
+  if(!first||!last||!email){ alert('Please fill name and email'); return; }
+  if(!consent){ alert('Consent is required before enrollment'); return; }
+
+  const participants=JSON.parse(localStorage.getItem(storageKey)||'[]');
+  const temp=JSON.parse(sessionStorage.getItem('hai_v85_temp')||'{}');
+  const participant={
+    id:'id-'+Math.random().toString(36).slice(2,9),
+    name:first+' '+last,email,consent,joined:new Date().toISOString(),timepoints:temp,
+    satisfaction: satisfaction, study: study.title||'Untitled Study'
+  };
+  participants.push(participant);
+  localStorage.setItem(storageKey, JSON.stringify(participants));
+  alert('Enrollment saved locally');
+  updateParticipantsTable();
+  sessionStorage.removeItem('hai_v85_temp');
+}
+function starsText(n){ return '★★★★★'.slice(0,n||0)+'☆☆☆☆☆'.slice(n||0); }
+function updateParticipantsTable(){
+  const list=JSON.parse(localStorage.getItem(storageKey)||'[]');
+  const tbody=document.getElementById('participantsTable');
+  if(!list.length){ tbody.innerHTML='<tr><td colspan="7">No participants yet</td></tr>'; return; }
+  tbody.innerHTML=list.map(p=>`<tr>
+    <td><input type="checkbox" class="sel" data-id="${p.id}"/></td>
+    <td>${p.name}</td>
+    <td>${p.email}</td>
+    <td>${p.study||'—'}</td>
+    <td>${Object.keys(p.timepoints||{}).length}</td>
+    <td>${starsText(p.satisfaction||0)}</td>
+    <td><button class='btn ghost' onclick='exportParticipantId("${p.id}")'>Export</button>
+        <button class='btn' style='background:#ef4444' onclick='deleteParticipant("${p.id}")'>Delete</button></td>
+  </tr>`).join('');
+}
+function toggleSelectAll(cb){ document.querySelectorAll('.sel').forEach(c=>c.checked=cb.checked); }
+function exportParticipantId(id){
+  const list=JSON.parse(localStorage.getItem(storageKey)||'[]'); const p=list.find(x=>x.id===id); if(!p){ alert('Participant not found'); return; }
+  const blob=new Blob([JSON.stringify(p,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`participant_${p.id}.json`; a.click(); URL.revokeObjectURL(url);
+}
+function deleteParticipant(id){ if(!confirm('Delete participant and all timepoints?')) return; let list=JSON.parse(localStorage.getItem(storageKey)||'[]'); list=list.filter(p=>p.id!==id); localStorage.setItem(storageKey, JSON.stringify(list)); updateParticipantsTable(); }
+
+// Excel export with star symbols and severity colors
+function exportSelectedExcel(){
+  const ids=[...document.querySelectorAll('.sel:checked')].map(c=>c.getAttribute('data-id'));
+  if(!ids.length){ alert('Select at least one participant.'); return; }
+  const list=JSON.parse(localStorage.getItem(storageKey)||'[]');
+  const sel = list.filter(p=>ids.includes(p.id));
+  if(!sel.length){ alert('No matching participants.'); return; }
+
+  // Sheet 1: Participants
+  const pRows = [['Name','Email','Study','Timepoints Count','Product Satisfaction (★)']];
+  sel.forEach(p=>{
+    pRows.push([p.name,p.email,p.study, Object.keys(p.timepoints||{}).length, starsText(p.satisfaction||0)]);
+  });
+  const ws1 = XLSX.utils.aoa_to_sheet(pRows);
+
+  // Sheet 2: Timepoint Metrics (flatten)
+  const metricKeys = ['wrinkles','redness','dryness','pores','hydration','brightness','hyperpigmentation'];
+  const header2 = ['Participant','Timepoint',...metricKeys.map(k=>k.toUpperCase())];
+  const rows2=[header2];
+  sel.forEach(p=>{
+    Object.keys(p.timepoints||{}).forEach(tp=>{
+      const m=p.timepoints[tp].metrics||{};
+      rows2.push([p.name,tp, ...metricKeys.map(k=>m[k] ?? '') ]);
+    });
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(rows2);
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws1, 'Participants');
+  XLSX.utils.book_append_sheet(wb, ws2, 'Timepoint Metrics');
+
+  // Download
+  XLSX.writeFile(wb, 'HAI_Export_Selected.xlsx');
+}
+
+// Privacy modal
+function privacyHTML(lang){
+  if(lang==='fr') return '<b>Protection des renseignements personnels</b><br>Conforme à la LPRPDE (PIPEDA), EPTC2, ICH E6(R2), GDPR et HIPAA (si applicable). Données codées, minimisées, désidentifiées pour publications; conservation limitée et droits d’accès/suppression sur demande. Contact: info@labhibalogique.com.';
+  return '<b>Privacy & Data Handling</b><br>Compliant with PIPEDA, TCPS2, ICH E6(R2) GCP, GDPR, and HIPAA (if applicable). Data are coded, minimized, and de-identified for publications; limited retention and rights to access/erasure on request. Contact: info@labhibalogique.com.';
+}
+function renderPrivacy(){ document.getElementById('privacyText').innerHTML = privacyHTML(LANG); }
+function openPrivacy(){ renderPrivacy(); document.getElementById('privacyModal').style.display='flex'; }
+function closePrivacy(){ document.getElementById('privacyModal').style.display='none'; }
+function downloadPrivacyPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  doc.setFont('helvetica','bold'); doc.setFontSize(14);
+  doc.text('Laboratoire Hibalogique Inc.', 40, 40);
+  doc.setFont('helvetica','normal'); doc.setFontSize(11);
+  const text = document.getElementById('privacyText').innerText;
+  const lines = doc.splitTextToSize(text, 520);
+  doc.text(lines, 40, 80);
+  doc.save('LH_Privacy_Data_Handling.pdf');
+}
+
+// consent PDF (simple)
+function generateConsentPDF(lang){
+  const { jsPDF } = window.jspdf;
+  const rec = JSON.parse(localStorage.getItem(consentKey)||'null');
+  const doc = new jsPDF({ unit:'pt', format:'a4' });
+  doc.setFont('helvetica','bold'); doc.setFontSize(14);
+  doc.text('Laboratoire Hibalogique Inc.', 40, 40);
+  doc.setFont('helvetica','normal'); doc.setFontSize(11);
+  const lines = (lang==='fr' ? 'Formulaire de consentement (signature électronique)' : 'Consent form (electronic signature)');
+  doc.text(lines, 40, 58);
+  let y=88;
+  const line = (lbl,val)=>{ doc.setFont('helvetica','bold'); doc.text(lbl,40,y); doc.setFont('helvetica','normal'); doc.text(String(val||'—'), 220, y); y+=18; };
+  if(rec){
+    line(lang==='fr'?'Nom complet :':'Full name :', rec.name);
+    line(lang==='fr'?'Âge :':'Age :', rec.age);
+    line(lang==='fr'?'Sexe/Genre :':'Gender/Sex :', rec.gender);
+    line(lang==='fr'?'Phototype :':'Phototype :', rec.phototype);
+    line(lang==='fr'?'Type de peau :':'Skin type :', rec.skin);
+  }
+  y+=6; doc.setFont('helvetica','bold'); doc.text(lang==='fr'?'Résumé du consentement':'Consent summary', 40, y); y+=14;
+  doc.setFont('helvetica','normal'); const maxW=515; const t= document.getElementById('consentText').innerText; const l=doc.splitTextToSize(t, maxW); doc.text(l, 40, y); y += l.length*14 + 20;
+  try{ const sig = rec? rec.signature_png : sigCanvas.toDataURL('image/png'); if(sig){ doc.addImage(sig,'PNG',40,y,220,80); y+=90; } }catch(e){}
+  doc.save(lang==='fr'?'Consentement_FR.pdf':'Consent_EN.pdf');
+}
+
+// basic chat
+function sendChat(){ const i=document.getElementById('chatInput'); const txt=i.value.trim(); if(!txt) return; const log=document.getElementById('chatLog'); const p=document.createElement('p'); p.textContent=txt; log.appendChild(p); i.value=''; const r=document.createElement('p'); r.textContent=LANG==='en'?'Use Capture → Save timepoint → Enroll.':'Utilisez Capture → Enregistrez un point temporel → Inscription.'; setTimeout(()=>{ log.appendChild(r); log.scrollTop=log.scrollHeight; }, 400); }
+
+document.getElementById('timepoints').addEventListener('input', renderConsent);
+
+// init
+document.addEventListener('DOMContentLoaded', ()=>{
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('sig_date').value=today;
+  updateParticipantsTable();
+});
+</script>
+</body>
+</html>
